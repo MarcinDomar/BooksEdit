@@ -5,16 +5,7 @@ var initData;
 var myAjax = new AjaxObj();
  var refreshTimer=setInterval(checkChangesInDB, 30000);
 myAjax.sendRequest(new InitRequestObj());
-document.onscroll = function() {
-    html = document.documentElement;
-    console.log(+html.offsetWidth + "   " + html.offsetHeight + '  '
-	    + html.offsetLeft + "  " + html.offsetTop);
-    console.log("-" + html.clientHeight + "  " + html.clientWidth);
-    conslole.log('sprawdzam');
-    console.log("scrool" + html.scrollLeft + "   " + html.scrollTop + ' '
-	    + html.scrollHeight + "   " + html.scrollWidth + "  ");
 
-};
 
 function isDefined(x) {
     var undefined;
@@ -177,8 +168,8 @@ function isPermissonForUpdate() {
 	return i == errors.length;
 }
 function checkChangesInDB() {
-    if (myAjax.intervalFromCom() >= 180)// 3min
-	myAjax.sendRequest(new CheckForDbChangesObj);
+    if (myAjax.intervalFromCom() >= 60)// 3min
+	myAjax.sendRequest(new CheckForDbChangesObj());
 }
 
 function addNewBook() {
@@ -206,7 +197,7 @@ function AjaxObj() {
 	}
     };
     this.isBusy = function() {
-	return (dtEnd.getTime() - dtStart.getTime()) >= 0;
+	return (dtEnd.getTime() - dtStart.getTime()) <= 0;
     };
 
     this.sendRequest = function(sender) {
@@ -478,7 +469,7 @@ function TemplateStateHendler(beginFun, endFun, actionTitle) {
     this.actionTitle = actionTitle;
     this.destroyInformer = function(messError) {
 	document.getElementById('informer').style.visibility = 'collapse';
-	//clearInterval(this.timer);
+	clearInterval(this.timer);
 	if (messError !== undefined)
 	    alert(messError);
     };
@@ -488,12 +479,10 @@ function TemplateStateHendler(beginFun, endFun, actionTitle) {
 	informer = document.getElementById('informer')
 	informer.style.visibility = 'visible';
 	informer.style.position = 'absolute';
-	console.log("  " + informer.offsetTop + informer.offsetLeft);
-	// console.log(" "+ informer.position);
 
 	document.getElementById('actName').innerHTML = this.actionTitle;
 	document.getElementById('messState').innerHTML = mess;
-	//this.timer=window.setInterval(function(){ animObj.animate();}, 50);
+	this.timer=window.setInterval(function(){ animObj.animate();}, 50);
     };
     this.turnButtons = function(enable) {
 	document.getElementById('updateBooksBt').disabled = !enable;
