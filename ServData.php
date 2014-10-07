@@ -8,7 +8,7 @@ $db_password = '123';
 
 $jsonO = json_decode(file_get_contents("php://input"));
 $connection = new mysqli($db_hostname, $db_username, $db_password, $db_database);
-//sleep();
+sleep(10);
 if ($connection->connect_error)
     $actBook = new ActBooks($connection->connect_error);
 else {
