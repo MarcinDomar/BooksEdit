@@ -69,7 +69,8 @@ function addInputEl(parentElement, tagname, type, desc, title, value,
     child.setAttribute('name', title);
     // child.setAttribute('value', value);
     child.value = value;
-    child.onfocusout = loseFocusFun;
+    child.addEventListener('focusout',loseFocusFun);
+//    child.onfocusout = loseFocusFun;
 
     return child;
 }
