@@ -3,9 +3,8 @@
  */
 var initData;
 var myAjax = new AjaxObj();
- var refreshTimer=setInterval(checkChangesInDB, 30000);
+var refreshTimer = setInterval(checkChangesInDB, 30000);
 myAjax.sendRequest(new InitRequestObj());
-
 
 function isDefined(x) {
     var undefined;
@@ -199,7 +198,6 @@ function AjaxObj() {
     this.isBusy = function() {
 	return (dtEnd.getTime() - dtStart.getTime()) <= 0;
     };
-
     this.sendRequest = function(sender) {
 	if (this.readyState == 1)
 	    dtStart = new Date();
@@ -209,6 +207,7 @@ function AjaxObj() {
 	this.request.setRequestHeader("Content-Type",
 		"application/json; charset=iso-8859-2");
 
+	this.request.InterestedOfState.inform(0, 0);
 	this.request.onreadystatechange = function() {
 	    // wait(2);
 	    if (this.readyState == 4 && this.status == 200) {
@@ -463,7 +462,7 @@ function wait(sec) {
 }
 
 function TemplateStateHendler(beginFun, endFun, actionTitle) {
-    var animObj=new AnimDivObj();
+    var animObj = new AnimDivObj();
     this.endFun = endFun;
     this.beginFun = beginFun;
     this.actionTitle = actionTitle;
@@ -478,11 +477,13 @@ function TemplateStateHendler(beginFun, endFun, actionTitle) {
 
 	informer = document.getElementById('informer')
 	informer.style.visibility = 'visible';
-	informer.style.position = 'absolute';
 
 	document.getElementById('actName').innerHTML = this.actionTitle;
 	document.getElementById('messState').innerHTML = mess;
-	this.timer=window.setInterval(function(){ animObj.animate();}, 50);
+	if (this.timer === undefined)
+	    this.timer = window.setInterval(function() {
+		animObj.animate();
+	    }, 50);
     };
     this.turnButtons = function(enable) {
 	document.getElementById('updateBooksBt').disabled = !enable;
@@ -494,10 +495,12 @@ function TemplateStateHendler(beginFun, endFun, actionTitle) {
     };
 
     this.stateRecived = function(state, status) {
-	if (state == 1) {
+	if (state == 0) {
 	    this.turnButtons(false);
 	    this.beginFun();
 	    this.initInformer('Nawiązuje połączenie z bazą');
+	} else if (state == 1) {
+	    ;
 	} else if (state == 2) {
 	    if (status == 200)
 		this.informUser('Strona polączyła sie z bazą proszę czekać ');
@@ -532,15 +535,18 @@ function TemplateStateHendler(beginFun, endFun, actionTitle) {
 
 function AnimDivObj() {
     this.div_ = document.getElementById('informer');
-    
+
     this.a = 0.5;
     this.dir = 0;
     this.t = 0;
-    
+
     this.animate = function() {
 	s1 = document.documentElement.scrollTop;
-	s3 = s1+document.documentElement.clientHeight- this.div_.offsetHeight;
-	s2 = s1+ (document.documentElement.clientHeight- this.div_.offsetHeight)/ 2|0;
+	s3 = s1 + document.documentElement.clientHeight
+		- this.div_.clientHeight;
+	s2 = s1
+		+ (document.documentElement.clientHeight - this.div_.clientHeight)
+		/ 2 | 0;
 	this.t++;
 	this.div_.style.left = ((document.documentElement.clientWidth - this.div_.clientWidth) / 2 | 0)
 		+ 'px';
@@ -555,7 +561,7 @@ function AnimDivObj() {
 	    a = this.v * this.v / (2 * (s3 - s2));
 	    ss = s2 + this.v * this.t - a * this.t * this.t / 2;
 	    if (ss <= s2) {
-		this.v= this.a*this.t/2
+		this.v = this.a * this.t / 2
 		this.dir = 3;
 		this.t = 0;
 	    }
@@ -565,7 +571,7 @@ function AnimDivObj() {
 	    a = this.v * this.v / (2 * (s2 - s1));
 	    ss = s2 - this.v * this.t + a * this.t * this.t / 2;
 	    if (ss >= s2) {
-		this.v= this.a*this.t/2;
+		this.v = this.a * this.t / 2;
 		this.dir = 1;
 		this.t = 0;
 	    }
@@ -623,4 +629,3 @@ function InitRequestObj() {
     };
     return this;
 }
-
