@@ -1,127 +1,165 @@
 <?php
-
-$db_hostname = 'localhost';
-$db_database = 'booksinfo';
-$db_username = 'mar';
-$db_password = '123';
-
-
 $jsonO = json_decode(file_get_contents("php://input"));
-$connection = new mysqli($db_hostname, $db_username, $db_password, $db_database);
-sleep(10);
-if ($connection->connect_error)
-    $actBook = new ActBooks($connection->connect_error);
-else {
-    
-    if ($jsonO->action == 'AddNew') {
-        $query = "INSERT INTO books (author, title,  year, comment,modifiedDate) VALUES" . "('" . $jsonO->newRec->author . "','" . $jsonO->newRec->title . "','" . $jsonO->newRec->year . "','" . $jsonO->newRec->comment . "',NOW())";
-        
-        $result = $connection->query($query);
-        
-        if ($result)
-            $actBooks = GetBooks($connection, getTimestemp($connection), $jsonO->timestemp);
-        else
-            $actBooks = new ActBooks(mysqli_error($connection));
-    } elseif ($jsonO->action == 'Init') {
-        $actBooks = GetBooks($connection, getTimestemp($connection), null);
-    } elseif ($jsonO->action == 'SaveChanges') {
-        $timestemp = getTimestemp($connection);
-        $count = count($jsonO->toUpdate);
-        $result=1;
-        for ($i = 0; $i < $count&& $result; $i ++) {
-            $up = array();
-            if(isset($jsonO->toUpdate[$i]->fields->year) ) {
-                $up[]='year = '.$jsonO->toUpdate[$i]->fields->year;
-                unset($jsonO->toUpdate[$i]->fields->year);
-            }
-            foreach ($jsonO->toUpdate[$i]->fields as $name => $value)
-                $up[] = $name . "= '" . $value."'";
-            $query = "UPDATE books SET " . join(",", $up) . ", modifiedDate = FROM_UNIXTIME(" . $timestemp . ") WHERE id = " . $jsonO->toUpdate[$i]->id;
-            $result = $connection->query($query);
+ sleep(10);
+
+try {
+    $ser=new ServData();
+    $forKlient=$ser->makeAction($jsonO);
+       
+}
+
+catch(Exception $ex)
+{
+    $forKlient= new ActBooks($ex->getMessage());
+}
+ 
+ $str = json_encode($forKlient);
+ header('Content-Type: application/json');
+ echo $str;
+ 
+
+class ServData
+{
+
+    const DB_HOSTNAME = 'localhost';
+
+    const DB_DATABASE = 'booksinfo';
+
+    const DB_USERNAME = 'mar';
+
+    const DB_PASSWORD = '123';
+
+    private $connection = null;
+
+    function __construct()
+    {
+        $this->connection = new mysqli(ServData::DB_HOSTNAME, ServData::DB_USERNAME, ServData::DB_PASSWORD, ServData::DB_DATABASE);
+    }
+    function __destruct(){
+        $this->connection->close();        
+    }
+    public function makeAction($klientData)
+    {
+        if ($klientData->action == 'AddNew') {
+            $this->AddNewBook($klientData->newRec);
+        } elseif ($klientData->action == 'SaveChanges') {
+            $this->SaveChanges($klientData->toUpdate, $klientData->toDelete);
         }
-        if ($i==0 || $result) {
-            $count = count($jsonO->toDelete);
-            $result=1;
-            for ($i = 0; $i < $count&& $result; $i ++) {
-                $query = "UPDATE books SET isDeleted=1, modifiedDate = FROM_UNIXTIME(" . $timestemp . ") WHERE id = " . $jsonO->toDelete[$i];
-                $result=$connection->query($query);
-            }
+        
+        if ($klientData->action == 'Init') {
+            $actBooks = $this->GetBooks(  null);
         }
-        if($i==0||$result)
-            $actBooks = GetBooks($connection, $timestemp, $jsonO->timestemp);
-        else 
-            $actBooks = new ActBooks(mysqli_error($connection));
+        else {
+            $actBooks = $this->GetBooks(  $klientData->timestemp);
+        }
+        return $actBooks;    
+    }
+
+    private function addNewBook($newRec)
+    {
+        $this->connection->begin_transaction();
+        $query = "INSERT INTO books (author, title,  year, comment,modifiedDate) VALUES" . "('" . $newRec->author . "','" . $newRec->title . "','" . $newRec->year . "','" . $newRec->comment . "',NOW())";
+        $result = $this->connection->query($query);
+        
+        if (! $result) {
+            $this->connection->rollback();
+            throw new Exception("Problem z dodawaniem nowej książki: " . $connection->connect_error);
+        } else {
+            $this->connection->commit();
+        }
+    }
+
+    private function saveChanges($toUpdate, $toRemove)
+    {
+        try {
+            $timestemp = $this->getTimestemp();
+            $count = count($toUpdate);
+            $result = 1;
+            $this->connection->begin_transaction();
             
+            for ($i = 0; $i < $count && $result; $i ++) {
+                $up = array();
+                if (isset($toUpdate[$i]->fields->year)) {
+                    $up[] = 'year = ' . $toUpdate[$i]->fields->year;
+                    unset($toUpdate[$i]->fields->year);
+                }
+                foreach ($toUpdate[$i]->fields as $name => $value)
+                    $up[] = $name . "= '" . $value . "'";
+                $query = "UPDATE books SET " . join(",", $up) . ", modifiedDate = FROM_UNIXTIME(" . $timestemp . ") WHERE id = " . $toUpdate[$i]->id;
+                $result = $this->connection->query($query);
+            }
+            if ($i == 0 || $result) {
+                $count = count($toRemove);
+                $result = 1;
+                for ($i = 0; $i < $count && $result; $i ++) {
+                    $query = "UPDATE books SET isDeleted=1, modifiedDate = FROM_UNIXTIME(" . $timestemp . ") WHERE id = " . $toRemove[$i];
+                    $result = $this->connection->query($query);
+                }
+            }
+            $this->connection->commit();
+        } catch (Exception $e) {
+            $this->connection->rollback();
+            throw new Exception("Problem z zapisywaniem zmian : " . $connection->connect_error);
+        }
     }
-    elseif( $jsonO->action=='Refresh') {
-        $actBooks = GetBooks($connection, getTimestemp($connection), $jsonO->timestemp);
-    }
-    $connection->close();
-    $str = json_encode($actBooks);
-    header('Content-Type: application/json');
-    echo $str;
-}
-
-
-
-function getRecsFromResult($result, &$aBooks)
-{
-    $rows = $result->num_rows;
-    for ($j = 0; $j < $rows; ++ $j) {
-        $result->data_seek($j);
-        $row = $result->fetch_array(MYSQL_ASSOC);
-        $book = new Book();
-        $book->author = $row['author'];
-        $book->title = $row['title'];
-        $book->comment = $row['comment'];
-        $book->id = $row['id'];
-        $book->year = $row['year'];
-        $aBooks[] = $book;
-    }
-}
-
-function getTimestemp($connection)
-{
-    $query = "SELECT UNIX_TIMESTAMP()";
-    $result = $connection->query($query);
-    $result->data_seek(0);
-    $ret=$result->fetch_array(MYSQLI_NUM)[0];
-     
-    return $ret;
-}
-
-function getBooks($connection,$newTimestemp ,$oldTimestemp)
-{
-
-    $actBooks = new ActBooks(null);
-    $actBooks->timestemp = $newTimestemp;
-     
-    if ($oldTimestemp == null)
-        $query = "SELECT * FROM books WHERE isDeleted = 0 ORDER BY id";
-    else
-        $query = "SELECT * FROM books WHERE isDeleted = 0 AND modifiedDate > FROM_UNIXTIME(" . $oldTimestemp . ")  ORDER BY id";
-
-    $result = $connection->query($query);
-    if(!$result)
-        $err=mysqli_error($connection);
-    getRecsFromResult($result, $actBooks->rows);
-    $result->close();
-
-    if ($oldTimestemp != null) {
-        $query = "SELECT id FROM books WHERE isDeleted = 1 AND modifiedDate > FROM_UNIXTIME(" . $oldTimestemp . ") ORDER BY id";
-        $result = $connection->query($query);
-        if(!$result)
-            $err=mysqli_error($connection);
-
+    private function getRecsFromResult($result, &$aBooks)
+    {
         $rows = $result->num_rows;
         for ($j = 0; $j < $rows; ++ $j) {
             $result->data_seek($j);
-            $row = $result->fetch_array(MYSQLI_NUM);
-            $actBooks->deletedIds[] = $row[0];
+            $row = $result->fetch_array(MYSQL_ASSOC);
+            $book = new Book();
+            $book->author = $row['author'];
+            $book->title = $row['title'];
+            $book->comment = $row['comment'];
+            $book->id = $row['id'];
+            $book->year = $row['year'];
+            $aBooks[] = $book;
         }
-        $result->close();
     }
-    return $actBooks;
+
+    private function getTimestemp()
+    {
+        $query = "SELECT UNIX_TIMESTAMP()";
+        $result = $this->connection->query($query);
+        $result->data_seek(0);
+        $ret = $result->fetch_array(MYSQLI_NUM)[0];
+        
+        return $ret;
+    }
+
+    private function getBooks($oldTimestemp)
+    {
+        $actBooks = new ActBooks(null);
+        $actBooks->timestemp = $this->getTimestemp();
+        
+        if ($oldTimestemp == null)
+            $query = "SELECT * FROM books WHERE isDeleted = 0 ORDER BY id";
+        else
+            $query = "SELECT * FROM books WHERE isDeleted = 0 AND modifiedDate > FROM_UNIXTIME(" . $oldTimestemp . ")  ORDER BY id";
+        
+        $result = $this->connection->query($query);
+        if (! $result)
+            throw new Exception("Problem z zapiswyanie zmian : " . $this->connection->connect_error);
+        $this->getRecsFromResult($result, $actBooks->rows);
+        $result->close();
+        
+        if ($oldTimestemp != null) {
+            $query = "SELECT id FROM books WHERE isDeleted = 1 AND modifiedDate > FROM_UNIXTIME(" . $oldTimestemp . ") ORDER BY id";
+            $result = $this->connection->query($query);
+            if (! $result)
+                throw new Exception("Problem z zapiswyanie zmian : " . $this->connection->connect_error);
+            
+            $rows = $result->num_rows;
+            for ($j = 0; $j < $rows; ++ $j) {
+                $result->data_seek($j);
+                $row = $result->fetch_array(MYSQLI_NUM);
+                $actBooks->deletedIds[] = $row[0];
+            }
+            $result->close();
+        }
+        return $actBooks;
+    }
 }
 
 class ActBooks
@@ -143,12 +181,14 @@ class ActBooks
 
 class Book
 {
+
     public $title, $author, $year, $comment, $id;
 }
 
 class ServerErr
 {
-    public $nr = 0, $errMessage="";
+
+    public $nr = 0, $errMessage = "";
 }
 
 ?>

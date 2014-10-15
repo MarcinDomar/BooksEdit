@@ -12,71 +12,17 @@ html,body {
 	/*	border-color: green;
 	border-style: dashed;*/
 	border-radius: 5mm;
-	overflow: auto;
+	overflow: hidden;
 	margin: 10mm auto 10mm auto;
-	padding: 0mm 10mm 0mm 10mm;
+	padding: 0mm 7mm 0mm 7mm;
 	width: 430pt;
 	background-color: #F3FFDB;
 	color: #065900;
 	box-shadow: 2px 2px 5px #800000;
 }
 
-.l1 {
-	overflow: auto;
-	
-	width: auto;
-	margin: 0pt 0pt 1pt 1pt;
-	padding: 5mm 0mm 5mm 0mm;
-	border-right-style: double;
-	border-bottom-style: double;
-	border-color: graytext;
-	border-width: medium;
-	border-color: graytext;
-	border-right-style: double;
-	background-color: #BCAE69;
-}
 
-.l2 {
-	overflow: auto;
-	margin: 0pt 0pt 1pt 1pt;
-	border-bottom-style: double;
-	border-right-style: double;
-	border-color: graytext;
-	border-width: medium;
-}
 
-.l3 {
-	overflow: auto;
-	width: inherit;
-	float: right;
-	margin: 5pt 0pt 1pt 1pt;
-	border-top-style: solid;
-	border-top-width: thick;
-	border-top-color: black;
-	border-left-style: solid;
-	border_left-width: thick;
-	border_left-color: black;
-	border-color: bgraytext;
-	border-width: medium;
-	border-right-style: double;
-	border-bottom-style: double;
-	border-bottom-left-radius: 11pt 11pt;
-	border-top-right-radius: 11pt 11pt;
-	background-color: white;
-}
-
-.row {
-	float: right;
-	margin-top: 2mm;
-	padding-right: 5mm;
-}
-
-.row>div {
-	font-size: 12pt;
-	display: inline;
-	margin: auto auto auto auto;
-	padding-right: 10mm;
-}
 
 .addctrl {
 	float: inherit;
@@ -104,7 +50,7 @@ html,body {
 	width: auto;
 }
 
-.uL1 {
+.uL1,.l1 {
 	padding: 5mm 0mm 5mm 0mm;
 	overflow: hidden;
 	margin: 0pt 0pt 1pt 1pt;
@@ -116,7 +62,7 @@ html,body {
 	background-color: #BCAE69;
 }
 
-.uL2 {
+.uL2,.l2 {
 	width: auto;
 	overflow: hidden;
 	margin: 0pt 0pt 1pt 1pt;
@@ -126,7 +72,7 @@ html,body {
 	border-width: medium;
 }
 
-.uL3 {
+.uL3,.l3 {
 	overflow: auto;
 	margin: 0mm;
 	margin: 5pt 0pt 1pt 1pt;
@@ -145,14 +91,14 @@ html,body {
 	background-color:white;
 }
 
-.rowUp {
+.rowUp,.row {
 	width: inherit;
 	float: right;
 	padding-right: 5mm;
 	overflow: hidden;
 }
 
-.rowUp>div {
+.rowUp>div,.row>div {
 	font-size: 12pt;
 	display: inline;
 	margin: auto auto auto auto;
@@ -167,13 +113,10 @@ html,body {
 	width: 300pt;
 }
 
-.toDelete {
+.toDelete, .Bt_Update ,#updateBooksBt,#addRec  {
 	margin: 5mm 0mm 5mm 0mm;
 }
 
-.Bt_Update {
-	margin: 5mm 0mm 5mm 0mm;
-}
 
 .wrongData {
 	border-color: red;
@@ -185,14 +128,6 @@ html,body {
 	border-color: yellow;
 	border-style: groove;
 	border-width: thick;
-}
-
-#updateBooksBt {
-	margin: 5mm 0mm 5mm 0mm;
-}
-
-#addRec {
-	margin: 5mm 0mm 5mm 0mm;
 }
 
 #actName
