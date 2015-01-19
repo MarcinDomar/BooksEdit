@@ -1,699 +1,947 @@
-/**
- * 
- */
-var booksEditObj = new BooksEditObj();
+(function ($) {
+    var erstFun1 = new ersting(0.5, 2, 0, -1);
 
-function binaryIndexOf(el, comFun, minIndex) {
-
-    if (minIndex === undefined) {
-	if (this.length === 0) {
-	    return ~0;
-	}
-	minIndex = 0;
+    $.easing.inCubic = function (t) {
+        return (t * t * t);
     }
-
-    var w = comFun(el, this[minIndex]);
-    if (w < 0) {
-	return ~minIndex;
-    } else if (w === 0) {
-	return minIndex;
+    $.easing.outQuartic = function (t) {
+        var ts = t * t,
+            tc = ts * t;
+        return 0.600000000000001 * tc * ts + -4.1475 * ts * ts + 9.095 * tc + -9.095 * ts + 4.5475 * t;
     }
-
-    w = comFun(el, this[this.length - 1]);
-
-    if (w === 0) {
-	return this.length - 1;
-    } else if (w > 0) {
-	return ~this.length;
-    } else {
-
-	var maxIndex = this.length - 1;
-	var currentIndex;
-
-	while (minIndex + 1 < maxIndex) {
-	    currentIndex = (minIndex + maxIndex) / 2 | 0;
-	    w = comFun(el, this[currentIndex]);
-	    if (w > 0) {
-		minIndex = currentIndex;
-	    } else {
-		maxIndex = currentIndex;
-	    }
-	}
-	return (comFun(el, this[maxIndex]) === 0) ? maxIndex : ~maxIndex;
-    }
-}
-
-function BooksEditObj() {
-
-    var config = {
-	      CSS:{
-	         classes:{
-	            wrongData:'wrongData',
-	            dataChanged:'dataChanged',
-	            bookContainer:'bookDiv',
-	            updateInput:'updateCtrs',
-	            addInput:'addctrl',
-	            labelInput:'rowUp',
-	            updateDivL1:'uL3',
-	            updateDivL2:'uL2',
-	            updateDivL3:'uL1',
-	            btBookToDelete:'toDelete',
-	            btBookDeleted:'Bt_Update'
-	        	
-	         },
-	         IDs:{
-	            booksDiv:'booksFolder',
-	            newBookDiv:'nowyrecord',
-	            informer:'informer',
-	            infoTitle:"actName",
-	            messageDiv:'messState',
-	            btUpdate:'updateBooksBt',
-	            btAddNewBook:'addRec'
-	        	
-	         }
-	      },
-	      labels:{
-	         title:'Tytuł',
-	         author:'Autor',
-	         year:'Rok Wydania',
-	         comment:'Komentarz',
-	         bookToRemove:'Usuń Książkę',
-	         bookRemoved:'Anuluj usuwanie kiążki'
-	      },
-	      actions:{
-		  initialization:'Init',
-		  addNewBook:'AddNew',
-		  saveChanges:'SaveChanges',
-		  refresh:'Refresh'
-	      }
-
-	   };
-
-
-    var pageData = new PageDataObj();
-    var myAjax = new AjaxObj();
-    var refreshTimer = setInterval(checkChangesInDB, 30000);
-    myAjax.sendRequest(new InitRequestObj());
-
-    function PageDataObj() {
-	return {
-	    timestemp : 0,
-	    rows : [],
-	    getDbBook : function(id, startIndex) {
-		return this.rows[binaryIndexOf.call(this.rows, {
-		    id : id
-		}, function(o1, o2) {
-		    return o1.id - o2.id;
-		}, startIndex)];
-	    }
-	};
-    }
-
-    function AjaxObj() {
-	var dtStart = new Date();
-	var dtEnd = new Date();
-
-	var isBusy = function() {
-	    return (dtEnd.getTime() - dtStart.getTime()) <= 0;
-	};
-
-	var intervalFromCom = function() {
-	    if (isBusy()) {
-		return -1;
-	    } else {
-		var dt = new Date();
-		return (dt.getTime() - dtEnd.getTime()) / 1000;
-	    }
-	};
-	var sendRequest = function(sender) {
-	    if (this.readyState == 1){
-		dtStart= new Date();
-	    }
-	    var request = new XMLHttpRequest();
-	    request.open("POST", "servData.php", true);
-	    request.setRequestHeader("Content-Type",
-		    "application/json; charset=iso-8859-2");
-
-	    sender.inform(0, 0);
-	    request.onreadystatechange = function() {
-		if (this.readyState == 4 && this.status == 200) {
-		    dtEnd = new Date();
-		    if (this.responseText != null) {
-			sender.thanksForData(JSON.parse(this.responseText));
-		    } else if (ifDefined(sender.NoDataError))
-			sender.noDataError();
-		} else if (this.status!==0 && this.status != 200)
-		    dtEnd = new Date();
-
-		sender.inform(this.readyState, this.status);
-	    };
-	    request.send(JSON.stringify(sender.dataPack));
-	};
-	return {
-	    intervalFromCom : intervalFromCom,
-	    sendRequest : sendRequest,
-	};
-    }
-
-
-    function upadeteCtlrsLatestChanges(data) {
-	pageData.timestemp = data.timestemp;
-	var index = 0, indexDiv = 0, tempObj = {};
-	
-	var booksCtrls = document.getElementById(config.CSS.IDs.booksDiv);
-	var bookDivs = booksCtrls.getElementsByClassName(config.CSS.classes.bookContainer);
-	var compFun = function(e1, e2) {
-	    return e1.id - e2.id;
-	};
-	for ( var i = 0; i < data.deletedIds.length; i++) {
-	    tempObj.id = data.deletedIds[i];
-	    index = binaryIndexOf.call(pageData.rows, tempObj, compFun, index);
-	    indexDiv = binaryIndexOf.call(bookDivs, tempObj, compFun, indexDiv);
-	    if (index >= 0) {
-		pageData.rows.slice(index, 1);
-		booksCtrls.removeChild(bookDivs[indexDiv]);
-	    }
-	}
-	bookDivs = booksCtrls.getElementsByClassName(config.CSS.classes.bookContainer);
-	index = indexDiv = 0;
-	for ( var i = 0; i < data.rows.length; i++) {
-	    tempObj.id = data.rows[i].id;
-	    index = binaryIndexOf.call(pageData.rows, tempObj, compFun, index);
-	    if (index < 0) {
-		index = ~index;
-		newBookDiv = getDivToUpdateBook(data.rows[i]);
-		if (index == pageData.rows.length) {
-		    pageData.rows.push(data.rows[i]);
-		    booksCtrls.appendChild(newBookDiv);
-
-		} else {
-		    indexDiv = ~(binaryIndexOf.call(bookDivs, tempObj, compFun,
-			    indexDiv));
-		    pageData.rows.slice(index, 1, data.rows[i]);
-		    booksCtrls.insertBefore(bookDivs[indexDiv],
-			    getDivToUpdateBook(data.rows[i]));
-		}
-	    } else {
-		pageData.rows[index] = data.rows[i];
-		indexDiv = binaryIndexOf.call(bookDivs, tempObj, compFun,
-			indexDiv);
-		ctrls = bookDivs[indexDiv].getElementsByClassName(config.CSS.classes.updateInput);
-		for (j = 0; j < ctrls.length; j++) {
-		    deleteClassN(ctrls[j], config.CSS.classes.wrongData);
-		    deleteClassN(ctrls[j], config.CSS.classes.dataChanged);
-		    ctrls[j].value = data.rows[i][ctrls[j].getAttribute('name')];
-		}
-		pageData.rows[index] = data.rows[i];
-	    }
-	}
-    }
-
-    function getDbidCtrl(control) {
-	var parent_ = control.parentElement;
-	while (parent_.className !== config.CSS.classes.bookContainer) {
-	    parent_ = parent_.parentElement;
-	}
-	return parent_;
-    }
-
-    function onDeleteBt() {
-	var parent_ = this.parentElement, 
-	ctrls = parent_.firstChild.getElementsByClassName(config.CSS.classes.updateInput), i, count, 
-		div = parent_.getElementsByClassName(config.CSS.classes.updateDivL3)[0];
-
-	for (i = 0, count = ctrls.length; i < count; i++) {
-	    ctrls[i].disabled = !ctrls[i].disabled;
-	}
-	if (this.className === config.CSS.classes.btBookDeleted) {
-	    div.removeChild(document.getElementById("img" + parent_.id));
-	    this.className = config.CSS.classes.btBookToDelete;
-	    this.value = config.labels.bookToRemove;
-	    div.style.height = 'auto';
-	    this.className = config.CSS.classes.btBookToDelete;
-	} else {
-	    this.className = config.CSS.classes.btBookDeleted;
-	    this.value = config.labels.bookRemoved;
-	    var img = document.createElement('img');
-	    img.src = 'res//cross.png';
-	    img.id = "img" + parent_.id;
-	    var acHeight = div.offsetHeight * 0.8;
-	    div.appendChild(img);
-	    var hig = (acHeight - div.style.paddingTop
-		    - div.style.paddingBottom - div.style.marginTop - div.style.marginBottom);
-	    img.width = img.naturalWidth * hig / img.naturalHeight;
-	    img.height = hig;
-	    img.style.position = 'relative';
-	    img.style.top = -(acHeight * 0.9) + 'px';
-	    div.style.height = acHeight + 'px';
-	}
-    }
-
-    function appendChildTag(parent, name, classname) {
-	var tag = document.createElement(name);
-	if (classname !== undefined) {
-	    tag.className = classname;
-	}
-	parent.appendChild(tag);
-	return tag;
-    }
-
-    function addInputEl(parentElement, tagname, type, desc, title, value,
-	    loseFocusFun) {
-
-	var rowDiv = appendChildTag(parentElement, 'div', config.CSS.classes.labelInput);
-	var child = appendChildTag(rowDiv, 'div');
-	child.innerText = desc;
-
-	child = appendChildTag(rowDiv, tagname, config.CSS.classes.updateInput);
-	child.type = type;
-	child.name = title;
-	child.value = value;
-	child.addEventListener('focusout', loseFocusFun);
-
-	return child;
-    }
-
-    function hasClass(element, cls) {
-	return (' ' + element.className + ' ').indexOf(' ' + cls + ' ') > -1;
-    }
-
-    function insertClassN(ctrl, className) {
-	if (!hasClass(ctrl, className)) {
-	    ctrl.className = ctrl.className + ' ' + className;
-	}
-    }
-
-    function deleteClassN(ctrl, className) {
-	var array = ctrl.className.split(' ');
-
-	if (array[1] === className) {
-	    array.pop();
-	}
-	ctrl.className = array.join(' ');
-    }
-
-    function checkChangesAndMark() {
-	var book = pageData.getDbBook(getDbidCtrl(this).id);
-	if (book[this.getAttribute('name')] == this.value) {
-	    deleteClassN(this, config.CSS.classes.dataChanged);
-	} else {
-	    insertClassN(this, config.CSS.classes.dataChanged);
-	}
-    }
-
-    function onLoseFocusYear() {
-	if (isNaN(this.value)) {
-	    insertClassN(this, config.CSS.classes.wrongData);
-	} else if (this.value < 1700 || this.value > (new Date()).getFullYear()) {
-	    insertClassN(this, config.CSS.classes.wrongData);
-	} else {
-	    deleteClassN(this, config.CSS.classes.wrongData);
-	    checkChangesAndMark.call(this);
-	}
-    }
-
-    var onLoseFocusYearAddNew = function(btn) {
-	if (isNaN(btn.value)) {
-	    insertClassN(btn, config.CSS.classes.wrongData);
-	} else if (btn.value < 1700 || btn.value > (new Date()).getFullYear()) {
-	    insertClassN(btn, config.CSS.classes.wrongData);
-	} else {
-	    deleteClassN(btn, config.CSS.classes.wrongData);
-	}
-    }
-
-    var onLoseFocuseTextInputAddNew = function(ctrl) {
-	var value = ctrl.value.trim();
-	if (value.length > 0) {
-	    deleteClassN(ctrl, config.CSS.classes.wrongData);
-	} else
-	    insertClassN(ctrl, config.CSS.classes.wrongData);
-    }
-
-    function onLoseFocusTextInput() {
-	this.value = this.value.trim();
-	if (this.value.length > 0) {
-	    deleteClassN(this, config.CSS.classes.wrongData);
-	    checkChangesAndMark.call(this);
-	} else
-	    insertClassN(this, config.CSS.classes.wrongData);
-    }
-
-    function GetComunicationObj(action, timestemp) {
-	return {
-	    timestemp : timestemp,
-	    action : action
-	};
-    }
-
-    function isPermissonForUpdate() {
-
-	var booksCtrls = document.getElementById(config.CSS.IDs.booksDiv);
-	var errors = booksCtrls.getElementsByClassName(config.CSS.classes.wronData);
-	for ( var i = 0, count = errors.length; i < count; i++) {
-	    if (!isCtrlBelongToToDelete(errors[i]))
-		break;
-	}
-	if (i == 0
-		&& errors.length == 0
-		&& (booksCtrls.getElementsByClassName(config.CSS.classes.btBookDeleted).length > 0 || booksCtrls
-			.getElementsByClassName(config.CSS.classes.dataChanged).length > 0))
-	    return true;
-	else
-	    return i == errors.length;
-    }
-
-    function checkChangesInDB() {
-	if (myAjax.intervalFromCom() >= 180)// 3min
-	    myAjax.sendRequest(new CheckForDbChangesObj());
-    }
-
-    var addNewBook = function() {
-	if (document.getElementById(config.CSS.IDs.newBookDiv).getElementsByClassName(
-		config.CSS.classes.wrongData).length == 0) {
-	    myAjax.sendRequest(new AddBookRequestObj());
-	}
-    }
-
-    onSaveChanges = function() {
-	if (isPermissonForUpdate())
-	    myAjax.sendRequest(new SaverObj());
+    $.easing.openBook = function (t) {
+        var ts = t * t,
+            tc = ts * t;
+        return 7.9 * tc * ts + -15.1 * ts * ts + 9.8 * tc + -2.5 * ts + 0.9 * t;
 
     }
-
-    function isCtrlBelongToToDelete(ctrl) {
-	return getDbidCtrl(ctrl).childNodes[1].className == config.CSS.classes.btBookDeleted;
+    $.easing.plump = function (t) {
+        var ts = t * t,
+            tc = ts * t;
+        return 38.745 * tc * ts + -69.59 * ts * ts + 31.995 * tc + -0.2 * ts + 0.05 * t;
     }
-    function turnCtrlsFromTagId(id, className, enable) {
-	var ctrls = document.getElementById(id).getElementsByClassName(
-		className);
-	for ( var i = 0, count = ctrls.length; i < count; i++) {
-	    ctrls[i].disabled = !enable;
-	}
-    }
+    function ersting(p2x, p2y, p3x, p3y) {
+        var ay = 1, by = 0, cy = 0, ax = 1, bx = 0, cx = 0;
+        if (p2y != 0) {
+            ay += 3 * p2y;
+            by += -6 * p2y;
+            cy += 3 * p2y;
+        }
+        if (p3y != 0) {
+            ay += -3 * p3y;
+            by += 3 * p3y;
+        }
 
-    function CheckForDbChangesObj() {
-	var stateHandler = new TemplateStateHendler(function() {
-	    ;
-	}, function() {
-	    ;
-	}, 'Dociąganie zmian w księgozborze');
+        if (p2x != 0) {
+            ax += 3 * p2x;
+            bx += -6 * p2x;
+            cx += 3 * p2x;
+        }
+        if (p3x != 0) {
+            ax += -3 * p3x;
+            bx += 3 * p3x;
+        }
 
-	return {
-	    dataPack : new GetComunicationObj(config.actions.refresh, pageData.timestemp),
-	    inform : function(state, status) {
-		stateHandler.stateRecived(state, status);
-	    },
-	    thanksForData : function(data) {
-		upadeteCtlrsLatestChanges(data, pageData);
-	    }
-	};
+        var p = cx / ax - bx * bx / (3 * ax * ax), q_ = 2 * bx * bx * bx / (27 * ax * ax * ax) - cx * bx / (3 * ax * ax), b3a = bx / (3 * ax), p3_27 = p * p * p
+            / 27, r = Math.sqrt(-p3_27), pom = 2 * Math.sqrt(-p / 3), PI2_3 = 2 * Math.PI / 3, PI4_3 = 4 * Math.PI / 3;
 
-    }
+        return {
+            fx: function (x, y, z, z_) {
+                var t = wielomian3(-x),
 
-    function SaverObj() {
+                    t2 = t * t, ret = t2 * by + (t2 * t) * ay + t * cy
+                return ret;
+            }
+        };
 
-	function Boo(ent) {
-	    var fields={};
-	    fields[ent.colName]=ent.value;
-	    return {
-		id : ent.id,
-		fields : fields,
-	
-		add : function(ent) {
-		    this.fields[ent.colName] = ent.value;
-		}
-	    };
-	}
+        function wielomian3(d) {
 
-	function Pair(l, col, v) {
-	    return {
-		id : l,
-		value : v,
-		colName : col
-	    };
-	}
+            var q = d / ax + q_, D = q * q / 4 + p3_27, x0, ret = {};
 
-	var dataPack = new GetComunicationObj(config.actions.saveChanges, pageData.timestemp); // getElementsByTagName()
-	var stateHandler = new TemplateStateHendler(function() {
-	    turnCtrlsFromTagId(config.CSS.IDs.newBookDiv, config.CSS.classes.addInput, false);
-	    turnCtrlsFromTagId(config.CSS.IDs.booksDiv, config.CSS.classes.updateInput, false);
-	}, function() {
-	    turnCtrlsFromTagId(config.CSS.IDs.newBookDiv, config.CSS.classes.addInput, true);
-	    turnCtrlsFromTagId(config.CSS.IDs.booksDiv, config.CSS.classes.updateInput, true);
-	}, 'Zapisywanie wprowadzonych zmian w katalogu ksiązek');
+            if (D > 0) {
+                var pD = Math.sqrt(D), pom1 = (-q / 2 - pD), v = (pom1 < 0) ? -Math.pow(-pom1, 0.33333) : Math.pow(pom1, 0.33333), pom2 = (-q / 2 + pD), u = (pom2 < 0)
+                    ? -Math.pow(-pom2, 0.33333)
+                    : Math.pow(pom2, 0.33333);
 
-	var elemsToUp = new Array();
-	var bookFolder = document.getElementById(config.CSS.IDs.booksDiv);
-	var elems = bookFolder.getElementsByClassName(config.CSS.classes.dataChanged);
-	for ( var i = 0, count = elems.length; i < count; i++) {
-	    if (!isCtrlBelongToToDelete(elems[i])) {
-		elemsToUp.push(new Pair(getDbidCtrl(elems[i]).id, elems[i]
-			.getAttribute('name'), elems[i].value));
-	    }
-	}
+                ret.x1 = x0 = v + u - b3a;
+            }
+            else if (D === 0) {
+                ret.x2 = ret.x1 = Math.pow(q / 2, 0.33333);
+                ret.x1 -= b3a;
+                if (ret.x1 >= 0 && ret.x1 <= 1) {
+                    x0 = ret.x1;
+                }
+                else {
+                    x0 = ret.x2 = -2 * ret.x2 - b3a;
+                }
 
-	var rows = [];
-	if (elemsToUp.length > 0) {
-	    rows.push(new Boo(elemsToUp[0]));
-	    for ( var i = 1, count = elemsToUp.length; i < count; i++) {
-		var last = rows[rows.length - 1];
-		if (last.id == elemsToUp[i].id)
-		    last.add(elemsToUp[i]);
-		else
-		    rows.push(new Boo(elemsToUp[i]));
-	    }
-	}
-	dataPack.toUpdate = rows;
-	dataPack.toDelete = [];
+            }
+            else if (D < 0) {
+                var angle = Math.acos((-q / 2) / r) / 3;
 
-	var delCtrls = bookFolder.getElementsByClassName(config.CSS.classes.btBookDeleted);
-	for ( var i = 0; i < delCtrls.length; i++) {
-	    dataPack.toDelete.push(getDbidCtrl(delCtrls[i]).id);
-	}
-	return {
-	    dataPack : dataPack,
-	    inform : function(state, status) {
-		stateHandler.stateRecived(state, status);
-	    },
-	    thanksForData : function(data) {
-		upadeteCtlrsLatestChanges(data);
-	    }
-	};
+                ret.x3 = pom * Math.cos(angle + PI4_3) - b3a;
+                if (ret.x3 >= 0 && ret.x3 <= 1) {
+                    x0 = ret.x3;
+                }
+                else {
+                    ret.x2 = pom * Math.cos(angle + PI2_3) - b3a;
+                    if (ret.x2 >= 0 && ret.x2 <= 1) {
+                        x0 = ret.x2;
+                    }
+                    else {
+                        x0 = ret.x1 == pom * Math.cos(angle / 3) - b3a;
+                    }
+                }
+            }
+            return x0;
+        }
     }
 
-    function AddBookRequestObj() {
-	var dataPack = new GetComunicationObj(config.actions.addNewBook, pageData.timestemp); // getElementsByTagName()
-	var stateHandler = new TemplateStateHendler(function() {
-	    turnCtrlsFromTagId(config.CSS.IDs.newBookDiv, config.CSS.classes.addInput, false);
-	}, function() {
-	    turnCtrlsFromTagId(config.CSS.IDs.newBookDiv, config.CSS.classes.addInput, true);
-	}, 'Dodawanie nowej pozycji książkowej');
+})(jQuery);
+$(document)
+    .ready(
+    function () {
+        var booksObj = {
+                books: getBooks(),
+                getDbBook: function (id, startIndex) {
+                    return this.books[this.index(id, startIndex)];
+                },
+                index: function (id, startIndex) {
+                    return binaryIndexOf.call(this.books, {
+                        id: id
+                    }, function (o1, o2) {
+                        return o1.id - o2.id;
+                    }, startIndex);
 
-	var elements = document.getElementById(config.CSS.IDs.newBookDiv).getElementsByClassName(config.CSS.classes.addInput);
-	dataPack.newRec = {};
-	for ( var i = 0; i < elements.length; i++) {
-	    el = elements[i];
-	    if (el.type != "button") {
-		dataPack.newRec[el.name] = el.value;
-		dataPack.newRec[el.name] = el.value;
-	    }
+                },
+                getLastBook: function () {
+                    return this.books[this.books.length - 1];
+                },
+                removeBooks: function (ids/*sorted*/) {
+                    var ind = 0;
+                    for (var i = 0; i < ids.length; i++) {
+                        ind = this.index(ids[i], ind);
+                        if (ind >= 0) {
+                            this.books.splice(ind, 1);
+                        }
+                    }
+                },
+                insert: function (ind, book) {
+                    this.books.splice(ind, 0, book);
+                }
+            },
+            $emptyBook = $('#' + config['CSS']['IDs']['emptyBook']),
+            editBook = new EditBookCtrl(),
+            wrongDataDivBookCtrl = new WrongDataDivBookCtrl(booksObj.getLastBook().id);
 
-	}
-	return {
-	    dataPack : dataPack,
-	    inform : function(state, status) {
-		stateHandler.stateRecived(state, status);
-	    },
-	    thanksForData : function(data) {
-		upadeteCtlrsLatestChanges(data, pageData);
-	    }
-	};
+        //edit book info
+        $('#' + config['CSS']['IDs']['booksFolder']).on('click', '.' + config['CSS']['classes']['smallBt'] + ':nth-child(2)', function () {
+        
+        	var $parent = $(this).parents('.' + config['CSS']['classes']['bookContainer']),
+                $cross = $parent.find('.' + config['CSS']['classes']['cross']), $this = $(this);
+            $cross.css('transform-origin', "right top 0");
 
-    }
+            var offBook = getWinCordElementCenter($parent), offButton = getWinCordElementCenter($this), angle, a11, a12, n;
 
-    function TemplateStateHendler(beginFun, endFun, actionTitle) {
-	var animObj = new AnimDivObj();
-	var timer;
+            if (!$.isNumeric($parent[0].id)) {
+                var p = $parent.offset();
+                $emptyBook.promise().done(function () {
+                    $emptyBook.addClass(config['CSS']['classes']['newBook']);
+                    $emptyBook.show().offset($parent.offset());
+                    $parent.css('visibility', 'hidden').find('.' + config['CSS']['classes']['bookButtons']);
+                    writeBookFromBook($emptyBook.find('#' + config['CSS']['IDs']['emptyTop']), $parent);
+                    throwAwayBook($parent.height(), $parent.width(), $emptyBook.position());
+                    $parent.animate({width: 0, height: 0}, {
+                        duration: 'slow', easing: 'inCubic', complete: function () {
+                            $parent.remove();
+                            $parent.remove();
+                        }
+                    });
+                    wrongDataDivBookCtrl.removeBook($parent);
+                });
 
-	var destroyInformer = function(messError) {
-	    document.getElementById(config.CSS.IDs.informer).style.visibility = 'collapse';
-	    clearInterval(timer);
-	    if (messError !== undefined)
-		alert(messError);
-	};
+            } else {
+                var $bookCurtain = $cross.find(':first-child'),
+                    PiPi = -2 * Math.PI, Pi3_2 = -3 * Math.PI / 2
+                var $crossX = $cross.find(':nth-child(2)'), fnStep = function (now, fx) {
+                    var angle = PiPi * now,
+                        a11 = Math.cos(angle) * now,
+                        a12 = -Math.sin(angle) * now;
 
-	var initInformer = function(mess) {
+                    if (angle < Pi3_2) {
+                        $bookCurtain.css('height', ((angle - Pi3_2) / Pi3_2 * 300) + '%');
+                    }
+                    else {
+                        $bookCurtain.css('height', '0');
+                    }
+                    $(this).css('transform', 'matrix(' + a11 + ',' + (-a12) + ',' + a12 + ',' + a11 + ',0,0)');
+                };
 
-	    var informer = document.getElementById(config.CSS.IDs.informer);
-	    informer.style.visibility = 'visible';
+                $crossX.promise().done(function () {
+                    if ($cross.is(':visible')) {
+                        var disX = offBook.left - offButton.left, disY = offBook.top - offButton.top;
+                        $crossX.css({borderSpacing: 0, transformOrigin: "right -50px 0"}).animate({
+                            borderSpacing: 1
+                        }, {
+                            step: function (now, fx) {
+                                fnStep.call(this, (1 - now));
+                            },
+                            duration: 1000,
+                            easing: 'plump'
 
-	    document.getElementById(config.CSS.IDs.infoTitle).innerHTML = actionTitle;
-	    document.getElementById(config.CSS.IDs.messageDiv).innerHTML = mess;
-	    if (timer === undefined)
-		timer = window.setInterval(function() {
+                        }).queue(function (next) {
+                            $cross.hide();
+                            next();
+                        });
+                        $this.siblings().show();
+                        wrongDataDivBookCtrl.checkBookAddOrRem($parent);
 
-		    animObj.animate();
-		}, 50);
-	};
+                    }
+                    else {
+                        var disX = offBook.left - offButton.left, disY = offBook.top - offButton.top;
+                        $cross.show();
+                        $this.siblings().hide();
+                        $crossX.css({borderSpacing: 0, transformOrigin: "right -50px 0"}).animate({
+                            borderSpacing: 1
+                        }, {
 
-	var turnButtons = function(enable) {
-	    document.getElementById(config.CSS.IDs.btUpdate).disabled = !enable;
-	    document.getElementById(config.CSS.IDs.btAddNewBook).disabled = !enable;
+                            step: fnStep,
+                            duration: 1000,
+                            easing: 'plump'
+                        });
+                        wrongDataDivBookCtrl.removeBook($parent);
+                    }
+                });
+            }
 
-	};
-	var informUser = function(mess) {
-	    document.getElementById(config.CSS.IDs.messageDiv).innerHTML = mess;
-	};
+        });
 
-	var stateRecived = function(state, status) {
-	    console.log("state  "+state , " status  "+ status);
-	    if (state == 0) {
-		turnButtons(false);
-		beginFun();
-		initInformer('Nawiązuje połączenie z bazą');
-	    } else if (state == 1) {
-		;
-	    } else if (state == 2) {
-		if (status == 200)
-		    informUser('Strona polączyła sie z bazą proszę czekać ');
-		else {
-		    endFun();
-		    trunButtons(true);
-		    destroyInformer("Numer błędu: " + status);
-		}
-	    } else if (state == 3) {
-		if (status == 200)
-		    informUser('Otrzymuje najnowsze dane  o książkach  bazą proszę czekać ');
-		else {
-		    endFun();
-		    trunButtons(true);
-		    destroyInformer("Numer błędu: " + status);
-		}
-	    } else if (state == 4) {
-		endFun();
+        //delete book
+        $('#' + config['CSS']['IDs']['booksFolder']).on('click', '.' + config['CSS']['classes']['smallBt'] + ':nth-child(1)', function () {
+            var $parent = $(this).parent();
+            while (!$parent.hasClass(config['CSS']['classes']['bookContainer'])) {
+                $parent = $parent.parent();
+            }
+            var ind = booksObj.index($parent[0].id);
+            editBook.openBookToEdit($parent, ind < 0 ? undefined : booksObj.books[ind]);
+        });
 
-		turnButtons(true);
+        function writeBookFromBook($bookTarget, $bookSource) {
+            var cnDataChanged = config['CSS']['classes']['dataChanged'], cnWrongData = config['CSS']['classes']['wrongData'], classes = cnDataChanged + ' ' + cnWrongData;
+            for (var col in config['columnsDesc']) {
+                var className = '.book-' + col,
+                    $source = $bookSource.find(className), classToAdd = ($source.hasClass(cnWrongData)) ? cnWrongData : ($source.hasClass(cnDataChanged)) ? cnDataChanged : '',
+                    value = ( $source.is('div')) ? $source.text() : $source.val(), target = $bookTarget.find(className);
+                $bookTarget.find(className).removeClass(classes).addClass(classToAdd).each(function () {
+                    var $this = $(this);
+                    if ($this.is('div')) {
+                        $this.text(value);
+                    } else {
+                        $this.val(value);
+                    }
+                });
+            }
+        }
 
-		if (status == 200)
-		    destroyInformer();
-		else
-		    destroyInformer("Numer błędu: " + status);
-	    }
-	};
+        function getBooks() {
+            var books = [],
+                colNames = config['columnsDesc'];
 
-	return {
-	    stateRecived : stateRecived
-	};
-    }
+            $('.' + config['CSS']['classes']['bookContainer']).slice(0, -2).each(function (index) {
+                var book = {};
+                book.id = this.id;
+                $this = $(this)
+                for (col in colNames) {
+                    book[col] = $this.find('.book-' + col).text();
+                }
+                books.push(book);
 
-    function AnimDivObj() {
-	var div_ = document.getElementById(config.CSS.IDs.informer);
-	var a = 1;
-	var dir = 0;
-	var t = 0;
+            })
+            return books;
+        }
 
-	return {
-	    animate : function() {
-		var s1 = document.documentElement.scrollTop > document.body.scrollTop?document.documentElement.scrollTop :document.body.scrollTop;
-		var s3 = s1 + document.documentElement.clientHeight
-			- div_.clientHeight;
-		var s2 = s1
-			+ (document.documentElement.clientHeight - div_.clientHeight)
-			/ 2 | 0;
-		t++;
-		var a_;
-		div_.style.left = ((document.documentElement.clientWidth - div_.clientWidth) / 2 | 0)
-			+ 'px';
-		if (dir == 0) {
-		    ss = s1 + a * (t * t) / 2;
-		    if (ss >= s2) {
-			dir = 1;
-			v = a * t;
-			t = 0;
-		    }
-		} else if (dir == 1) {
-		     a_ = v * v / (2 * (s3 - s2));
-		    ss = s2 + v * t - a_ * t * t / 2;
-		    if (ss <= s2) {
-			v = a * t / 2
-			dir = 3;
-			t = 0;
-		    }
-		}
+        function throwAwayBook(height, width, fixedPosition, onComplete) {
+            var tC = height / 10, wHeight = $(window).height(), wWidth = $(window).width(),
+                tx = ((width + fixedPosition.left) > wWidth - fixedPosition.left ) ? -width - fixedPosition.left : wWidth - fixedPosition.left,
+                ty = (height + fixedPosition.top > wHeight - fixedPosition.top) ? -height - fixedPosition.top : wHeight - fixedPosition.top,
+                PiPi = -2 * Math.PI;
+            $emptyBook.css({
+                borderSpacing: 0,
+                display: 'block',
+                'transform-origin': '50% 50% 0'
+            }).animate({borderSpacing: 1}, {
+                    step: function (now, fx) {
+                        var angle = PiPi * now,
+                            cosA = Math.cos(angle), sinA = Math.sin(angle),
+                            a11 = cosA * (1 - now),
+                            a12 = sinA * (1 - now);
+                        $(this).css('transform', 'matrix(' + a11 + ',' + a12 + ',' + (-a12) + ',' + a11 + ',' + (-tC * sinA + tx * now) + ',' + (cosA * tC - tC + ty * now) + ')');//(-280*n)+','+(316*n) +')');
+                    },
+                    complete: function () {
+                        $emptyBook.hide().css('transform', 'none').removeClass(config['CSS']['classes']['newBook']);
+                        $emptyBook.find('.'+config['CSS']['classes']['wrongData']).removeClass(config['CSS']['classes']['wrongData']);
+                        if ($.isFunction(onComplete)) {
+                            onComplete();
+                        }
+                    },
+                    duration: 1600,
+                    easing: 'outQuartic'
+                }
+            );
 
-		else if (dir == 3) {
-		    a_ = v * v / (2 * (s2 - s1));
-		    ss = s2 - v * t + a_ * t * t / 2;
-		    if (ss >= s2) {
-			v = a * t / 2;
-			dir = 1;
-			t = 0;
-		    }
-		}
+        }
 
-		div_.style.top = (ss | 0) + 'px';
-	    }
-	};
-    }
-    
-    function getDivToUpdateBook(book) {
-	var retDiv = document.createElement('div');
-	retDiv.className = config.CSS.classes.bookContainer;
-	retDiv.id = book.id;
+        function binaryIndexOf(el, comFun, minIndex) {
+            if (minIndex === undefined) {
+                if (this.length === 0) {
+                    return ~0;
+                }
+                minIndex = 0;
+            }
 
-	var inputEl = appendChildTag(retDiv, 'div', config.CSS.classes.updateDivL1);
-	inputEl = appendChildTag(inputEl, 'div', config.CSS.classes.updateDivL2);
-	inputEl = appendChildTag(inputEl, 'div', config.CSS.classes.updateDivL3);
+            var w = comFun(el, this[minIndex]);
+            if (w < 0) {
+                return ~minIndex;
+            }
+            else if (w === 0) {
+                return minIndex;
+            }
 
-	var btn = appendChildTag(retDiv, 'input', config.CSS.classes.btBookToDelete);
-	btn.setAttribute('type', 'button');
-	btn.setAttribute('value', config.labels.bookToRemove);
-	btn.onclick = onDeleteBt;
+            w = comFun(el, this[this.length - 1]);
 
-	addInputEl(inputEl, 'input', 'text', config.labels.title, 'title', book.title,
-		onLoseFocusTextInput);
-	addInputEl(inputEl, 'input', 'text', config.labels.author, 'author', book.author,
-		onLoseFocusTextInput);
-	addInputEl(inputEl, 'input', 'number', config.labels.year, 'year',
-		book.year, onLoseFocusYear);
+            if (w === 0) {
+                return this.length - 1;
+            }
+            else if (w > 0) {
+                return ~this.length;
+            }
+            else {
 
-	var nameEl = addInputEl(inputEl, 'textarea', 'text', config.labels.comment,
-		'comment', book.comment, checkChangesAndMark);
-	nameEl.setAttribute('rows', '4');
-	return retDiv;
-    }
+                var maxIndex = this.length - 1;
+                var currentIndex;
 
-    function InitRequestObj() {
-	var stateHandler = new TemplateStateHendler(function() {
-	    ;
-	}, function() {
-	    ;
-	}, 'Inicjalizacja strony '),
+                while (minIndex + 1 < maxIndex) {
+                    currentIndex = (minIndex + maxIndex) / 2 | 0;
+                    w = comFun(el, this[currentIndex]);
+                    if (w > 0) {
+                        minIndex = currentIndex;
+                    }
+                    else {
+                        maxIndex = currentIndex;
+                    }
+                }
+                return (comFun(el, this[maxIndex]) === 0) ? maxIndex : ~maxIndex;
+            }
+        }
 
-	thanksForData = function(data) {
-	    var i, count = data.rows.length,
-	    elem = document.getElementById(config.CSS.IDs.booksDiv);
+        function EditBookCtrl() {
 
-	    pageData.timestemp = data.timestemp;
-	    pageData.rows = data.rows;
-	    for (i = 0; i < count; i++)
-		elem.appendChild(getDivToUpdateBook(pageData.rows[i]));
-	};
+            var $sourceEl, bookData, $closeBt = $emptyBook.find('.' + config['CSS']['classes']['smallBt'] + ':eq(1)');
+            $emptyTop = $emptyBook.find('#emptyTop'), $emptyLeft = $emptyBook.find('#emptyLeft'), $emptyRight = $emptyLeft.prev();
+            var cnDataChanged = config['CSS']['classes']['dataChanged'], cnWrongData = config['CSS']['classes']['wrongData'];
+            $emptyTop.css('transform-origin', "left top 0");
+            $emptyTop.css('transform', "rotateY(0deg)");
 
-	return {
-	    dataPack : new GetComunicationObj(config.actions.initialization, 0),
-	    inform : function(state, status) {
-		stateHandler.stateRecived(state, status);
-	    },
-	    thanksForData : thanksForData
-	};
+            var changesCtrl= new ChangesCtrl();
+          
+            $emptyBook.find('.' + config['CSS']['classes']['book-input']).focusout(function () {
+                var $this = $(this);
+                var s = this.value;
+                colName = this.className.match(/\s*book-(\w+)/)[1];
+                if (colName !== 'comment' && s === '') {
+                    $this.removeClass(cnDataChanged).addClass(cnWrongData);
+                }
+                else if (colName == 'year' && (s < 1800 || s > (new Date()).getFullYear())) {
+                    $this.removeClass(cnDataChanged).addClass(cnWrongData);
+                }
+                else if (bookData !== undefined && s != bookData[colName]) {
+                    $this.removeClass(cnWrongData).addClass(cnDataChanged);
+                }
+                else {
+                    $this.removeClass(cnWrongData).removeClass(cnDataChanged);
+                }
+            });
 
-    }
-    return {
-	onLoseFocusYearAddNew : onLoseFocusYearAddNew,
-	onLoseFocuseTextInputAddNew : onLoseFocuseTextInputAddNew,
-	onSaveChanges : onSaveChanges,
-	addNewBook : addNewBook
-    };
-}
+            $('#' + config['CSS']['IDs']['btAddNewBook']).click(function () {
+                $sourceEl = undefined;
+                bookData = undefined;
+                var $buttons = $('#' + config['CSS']['IDs']['ctrlPanel']);
+                for (var col in config['columnsDesc']) {
+                    $emptyBook.find('.book-' + col).each(function (index, el) {
+                        if ($(el).is('div')) {
+                            $(el).text('');
+                        }
+                        else {
+                            el.value = '';
+                        }
+                    }).trigger('focusout');
+                }
+                var off = $(this).offset(), offTop = off.top - $(document).scrollTop();
+
+                var btSaveChanges = $buttons.find('#' + config['CSS']['IDs']['btSaveChanges'])[0], 
+                btAddNewBook = this, 
+                disabledBtSaveChanges = btSaveChanges.disabled;
+               
+                btAddNewBook.disabled = btSaveChanges.disabled = true;
+
+                $emptyBook.addClass(config['CSS']['classes']['newBook']);
+                $emptyBook.css({
+                    bottom: window.innerHeight - offTop,
+                    top: 'auto',
+                    left: off.left,
+                    display: 'block'
+                }).slideUp(0).slideDown({
+                    duration: 'slow',
+                    complete: function () {
+                        $emptyBook.css({'top': offTop - $emptyBook.height(), bottom: 'auto'});
+                        $buttons.hide('fast');
+                        btAddNewBook.disabled = false;
+                        btSaveChanges.disabled = this.disabled = disabledBtSaveChanges;
+                    }
+                });
+                animOpen1();
+            });
+
+            var openBookToEdit = function ($sourceEl_, book) {
+                $sourceEl = $sourceEl_;
+                bookData = book;
+                if (bookData === undefined) {
+                    $emptyBook.addClass(config['CSS']['classes']['newBook']);
+                }
+                writeBookFromBook($emptyBook, $sourceEl_);
+
+
+                $('#' + config['CSS']['IDs']['ctrlPanel']).hide('fast');
+                $emptyBook.show().offset($sourceEl.offset());
+                $sourceEl.css('visibility', 'hidden');
+                animOpen1();
+            }
+
+            function animOpen1() {
+
+                $('.' + config['CSS']['classes']['bookButtons']).not($emptyBook.find('.' + config['CSS']['classes']['bookButtons'])).css('visibility', 'hidden');
+                $('#curtain').show();
+                $emptyBook.promise().done(function () {
+                    var height = $emptyBook.show().height();
+                    var $win = $(window), x = ($win.width() - 2 * $emptyBook.outerWidth()) / 2 + $emptyBook.width(), y = ($win.height() - height) / 2;
+
+                    $animEl = $emptyTop;
+                    $emptyBook.animate({
+                        left: x,
+                        top: y
+                    }, {
+                        duration: 'slow',
+                        easing: 'outQuartic',
+                        complete: function () {
+                            $(this).css({
+                                left: '50%',
+                                top: '50%'
+                            });
+                            $(this).css('transform', 'translate(-14%,-50%)');
+                        }
+                    }).queue(function (next) {
+                        animOpen2();
+                        next();
+                    });
+                });
+            }
+
+            function animOpen2() {
+                var flag = false;
+                $emptyTop.css('borderSpacing', 0).animate({
+                    borderSpacing: 1
+                }, {
+                    step: function (now, fx) {
+                        var angle = -Math.PI * now;
+
+                        if (flag == false && angle < -Math.PI / 2) {
+                            flag = true;
+                            $animEl[0].style.visibility = 'hidden';
+                            $animEl = $emptyLeft;
+                            $animEl[0].style.visibility = 'visible';
+                        }
+
+                        $animEl.css('transform', 'rotateY(' + angle + 'rad)');
+                    },
+                    duration: 600,
+                    easing: 'openBook'
+                }).queue(function (next) {
+                    $animEl.css('overflow', 'visible')
+                        .prev().find('>').css('visibility', 'hidden');
+                    var cos =$animEl.find('.'+config['CSS']['classes']['book-input']+':first');
+                    cos.focus();
+                    $closeBt.show('fast');
+                    $('#buttons').show('fast');
+                    next();
+                });
+            };
+
+            $closeBt.click(animClose);
+
+            function animClose() {
+
+                $emptyRight.find('>').css('visibility', 'visible');
+                writeBookFromBook($emptyBook, $emptyLeft)
+
+                var flag = false, $animEl = $emptyLeft;
+                $closeBt.hide('fast');
+                $('#buttons').hide('fast');
+
+                $animEl.css('overflow', 'hidden');
+                $emptyTop.css('borderSpacing', 0).animate({
+                    borderSpacing: 1
+                }, {
+                    step: function (now, fx) {
+                        angle = -Math.PI * (1 - now);
+                        if (flag == false && angle > -Math.PI / 2) {
+                            flag = true;
+                            $animEl.css('visibility', 'hidden');
+                            $animEl = $emptyTop;
+                            $animEl.css('visibility', 'visible');
+                        }
+                        $animEl.css('transform', 'rotateY(' + angle + 'rad)');
+                    },
+                    duration: 600,
+                    easing: 'openBook'
+                }).queue(
+                    function (next) {
+                        var $win = $(window), classToRem = cnDataChanged + ' ' + cnWrongData,
+                            initStyle = {
+                                transform: 'none',
+                                left: (($win.width() - 2 * $emptyBook.outerWidth()) / 2 + $emptyBook.width()),
+                                top: ($win.height() - $emptyBook.outerHeight()) / 2
+                            };
+                        for (var col in config['columnsDesc']) {
+                            $emptyBook.find('.book-' + col).removeClass(classToRem);
+                        }
+                        if ($sourceEl === undefined) {
+                            $emptyBook.css(initStyle);
+                            throwAwayBook($emptyBook.height(), $emptyBook.width(), $emptyBook.position(), onCompleteAnimClose);
+                        } else {
+                            var off = $sourceEl.offset(),
+                                endAnimStyle = {
+                                    left: off.left - $win.scrollLeft(),
+                                    top: off.top - $win.scrollTop()
+                                };
+                            $emptyBook
+                                .css(initStyle)
+                                .animate(endAnimStyle
+                                , {
+                                    duration: 'fast',
+                                    easing: 'outQuartic',
+                                    complete: function () {
+                                        $emptyBook.hide().removeClass(config['CSS']['classes']['newBook']);
+                                        if ($sourceEl !== undefined) {
+                                            $sourceEl.css('visibility', 'visible');
+                                        }
+                                        onCompleteAnimClose();
+                                    }
+                                });
+                        }
+                        next();
+
+                        function onCompleteAnimClose() {
+                            $('.' + config['CSS']['classes']['bookButtons']).not($emptyBook.find('.' + config['CSS']['classes']['bookButtons'])).each(
+                                function (index, el) {
+                                    el.style.visibility = 'visible';
+                                });
+                            $('#' + config['CSS']['IDs']['ctrlPanel']).show('fast')
+                            $('#curtain').hide();
+                        }
+                    });
+
+            }
+            $('#' + config['CSS']['IDs']['editButtons'] + '>input:nth-child(2)').click(animClose);
+            $('#' + config['CSS']['IDs']['editButtons'] + '>input:nth-child(1)').click(function () {
+                if ($sourceEl === undefined) {
+                    var s = config['CSS']['IDs']['newBook'],
+                        $newBook = $('#' + s), $tempNewBook = $newBook.clone(), prev = $newBook.prev(), nr = 0;
+
+                    if (prev.length > 0) {
+                        var pattern = new RegExp(s + '-(\\d+)');
+                        ret = pattern.exec('' + prev[0].id);
+                        if (ret && ret.length > 0) {
+                            nr = parseInt(ret[1]) + 1;
+                        }
+                    }
+                    $newBook[0].id = s + '-' + nr;
+                    $sourceEl = $newBook.css({
+                        visibility: 'hidden',
+                        display: 'block',
+                        width: 0,
+                        height: 0
+                    }).after($tempNewBook).addClass(config['CSS']['classes']['newBook']);
+                    var $win = $(window), $body = $('body');
+                    fn = function () {
+                        var top = $win.scrollTop(), maxScrollTop = $body[0].scrollHeight - $win.outerHeight();
+                        if (top < maxScrollTop) {
+                            $win.scrollTop(maxScrollTop);
+                        }
+                    };
+                    $sourceEl.animate({width: '80mm', height: 414}, {
+                        duration: 600,
+                        easing: "inCubic",
+                        complete: function () {
+                            $sourceEl.css('height', 'initial');
+                            fn();
+                        },
+                        step: fn
+                    });
+                }
+
+                animClose();
+                writeBookFromBook($sourceEl, $emptyTop);
+                wrongDataDivBookCtrl.checkBookAddOrRem($sourceEl);
+            });
+
+            return {
+                openBookToEdit: openBookToEdit
+            };
+        }
+
+        function WrongDataDivBookCtrl(lastBookId) {
+            lastBookId += 1;
+            var wrongBooks = [],
+                pattern = new RegExp(config['CSS']['IDs']['newBook'] + '-(\\d+)'),
+                btSaveChanges = $('#' + config['CSS']['IDs']['btSaveChanges'])[0],
+
+                checkBookAddOrRem = function ($divBook) {
+                    var b = $divBook.find('.' + config['CSS']['classes']['wrongData']).length > 0,
+                        ind = binaryIndexOf.call(wrongBooks, $divBook[0], compDivBooks)
+                    if (b && ind < 0) {
+                        wrongBooks.splice(~ind, 0, $divBook[0]);
+                        btSaveChanges.disabled = true;
+                    } else if (!b && ind >= 0) {
+                        wrongBooks.splice(ind, 1);
+                        if (wrongBooks.length == 0) {
+                            btSaveChanges.disabled = false;
+                        }
+                    }
+                },
+                removeBook = function ($divBook) {
+                    var ind = binaryIndexOf.call(wrongBooks, $divBook[0], compDivBooks);
+                    if (ind >= 0) {
+                        wrongBooks.splice(ind, 1);
+                        if (wrongBooks.length == 0) {
+                            btSaveChanges.disabled = false;
+                        }
+                    }
+
+                },
+                setLastBookId = function (newLastBookId) {
+                    lastBookId = newLastBookId + 1;
+                };
+            //           btSaveChanges.disabled=true;
+            function compDivBooks(divBook1, divBook2) {
+                var ret, nr1 = (ret = pattern.exec('' + divBook1.id)) ? lastBookId + ret[1] : divBook1.id,
+                    nr2 = (ret = pattern.exec('' + divBook2.id)) ? lastBookId + ret[1] : divBook2.id;
+                return nr1 - nr2;
+            }
+
+            return {setLastBookId: setLastBookId, checkBookAddOrRem: checkBookAddOrRem, removeBook: removeBook}
+        }
+
+
+        function getWinCordElementCenter($element) {
+            var offset = $element.offset();
+            offset.left += $element.width() / 2 - $(window).scrollLeft();
+            offset.top += $element.height() / 2 - $(window).scrollTop();
+            return offset;
+        }
+
+        function ChangesCtrl() {
+            var lastMod = new Date().getTime();
+            var finishedMod = lastMod+1,
+                pendulum = new Pendulum($('#pendulum'));
+               refreshTimer = setInterval(function () {
+                        if (lastMod < finishedMod && ((new Date()).getTime() - finishedMod) > 30000) {
+                            refreshFromServer();
+                        }
+                    }, 500
+                );
+            $('#' + config['CSS']['IDs']['btSaveChanges']).click(function () {
+                var action = GetComunicationObj(config['actions']['saveChanges']),
+                action = $.extend(action, getChanges());
+                pendulum.$el.text('Connecting to server. Saving changes.')
+                doAjax(action);
+            });
+           
+            function doAjax(actionObj){
+                $buttons1=$('.'+config ['CSS'] ['classes'] ['smallBt']+':visible').css("visibility","hidden"),
+                $buttons2=$('.'+config ['CSS'] ['classes'] ['bigBt']+':visible').css("visibility","hidden");
+               
+                pendulum.startAnimate(30000,function(){
+                	 $buttons1.css("visibility","visible");
+                     $buttons2.css("visibility","visible");
+                });
+                
+                $.ajax({
+                    type:"POST",
+                    url: 'BooksEdit.php',
+                    dataType: 'json',
+                    data: actionObj,
+                    timeout: 20000
+                }).done(response).fail(function (jqXHR) {$('body').append(jqXHR.responseText);
+                }).always(function () {
+                    pendulum.stopAnimate();
+                     });
+            };
+
+            function GetComunicationObj(action) {
+                return {
+                    timestemp: $('#' + config['CSS']['IDs']['booksFolder']).data('timestemp'),
+                    action: action
+                };
+            }
+
+            function refreshFromServer() {
+                var action = GetComunicationObj(config['actions']['refresh']);
+                pendulum.$el.text('Connecting to server. Getting changes.')
+                doAjax(action);
+                
+
+            }
+
+            function response(data) {
+                $('#' + config['CSS']['IDs']['booksFolder']).data('timestemp', data.timestemp);
+                var $toDel,book;
+                $toDel = $('#' + data.deletedIds.join(',#')).css({overflow:'hidden',visibility:'hidden'}).animate({height: 0, width: 0}, {duration: 'slow'});
+                console.log( data.timestemp);
+                var $allBooksDiv = $('#' + config['CSS']['IDs']['booksFolder'] + '>div.' + config['CSS']['classes']['bookContainer'] + ":visible"), booksLength = booksObj.books.length,
+                    $newBooksDiv = $allBooksDiv.slice(booksLength, $allBooksDiv.length), $oldBooksDiv = $allBooksDiv.slice(0, booksLength);
+                var $newBook = $('#' + config['CSS']['IDs']['newBook']), tempNewBook;
+
+                var index = 0, indexDiv = 0, added = 0, onNewAdded = 0, tempObj = {};
+                index = indexDiv = 0;
+                for (var i = 0; i < data.rows.length; i++) {
+                    tempObj.id = data.rows[i].id;
+                    book=data.rows[i];
+                    index = booksObj.index(tempObj.id, index);
+                    if (index < 0) {
+                        index = ~index;
+                        if (index - added < $oldBooksDiv.length) {
+                            tempNewBook = $newBook.clone();
+                            $(oldBooksDiv[index - added]).before(tempNewBook);
+                            added += 1;
+                        }
+                        else if ($newBooksDiv.length > onNewAdded) {
+                            tempNewBook = $newBooksDiv[onNewAdded ];
+                            onNewAdded += 1;
+                        }
+                        else {
+                            tempNewBook = $newBook.clone();
+                            $newBook.before(tempNewBook);
+                        }
+                        booksObj.insert(index, book);
+                        $(tempNewBook).show();
+                        bookToHtml(book,tempNewBook);
+                    }
+                    else {
+                        booksObj.books[index] = book;
+                        bookToHtml(book, $oldBooksDiv[index - added])
+                    }
+                
+                }
+                    $toDel.promise().done(function () {
+                        this.remove();
+                    })
+                    booksObj.removeBooks(data.deletedIds);
+                    finishedMod=new Date().getTime();
+            }
+
+            function getChanges() {
+                var s='#' + config['CSS']['IDs']['booksFolder'] + '>div.' + config['CSS']['classes']['bookContainer'] + ":visible";
+                var $allBooksDiv = $('#' + config['CSS']['IDs']['booksFolder'] + '>div.' + config['CSS']['classes']['bookContainer'] + ":visible"), booksLength = booksObj.books.length,
+                    $newBooksDiv = $allBooksDiv.slice(booksLength, $allBooksDiv.length), $oldBooksDiv = $allBooksDiv.slice(0, booksLength);
+                var retObj = {toRemove: [], toUpdate: [], toAdd: []}
+
+                $oldBooksDiv.each(function (index) {
+                    var $this = $(this), $changes;
+                    if ($this.find('div.' + config['CSS']['classes']['cross'] + ':visible').length > 0) {
+                        retObj.toRemove.push(this.id);
+                    } else if (($changes = $this.find('.' + config['CSS']['classes']['dataChanged'])).length > 0) {
+                        var bookChanged = {id: this.id, fields: {}};
+                        $changes.each(function (ind) {
+                            bookChanged.fields[this.className.match(/\s*book-(\w+)\s*/)[1]] = $(this).text();
+                        })
+                        retObj.toUpdate.push(bookChanged)
+                    }
+                });
+
+                $newBooksDiv.each(function (ind) {
+                    var columns = {};
+                    for (var col in config['columnsDesc']) {
+                        columns[col] = $(this).find('.book-' + col).text();
+                    }
+                    retObj.toAdd.push(columns);
+                });
+            return retObj;
+            }
+            
+        }
+
+        function bookToHtml(book, target) {
+            var toDelClasses = config['CSS']['classes']['wrongData'] + ' ' + config['CSS']['classes']['dataChanged'],$target=$(target);
+            $target.removeClass(config['CSS']['classes']['newBook']);
+            $target[0].id = book.id;
+            for (var col in config['columnsDesc']) {
+                $target.find('.book-' + col).removeClass(toDelClasses).text(book[col]);
+
+            }
+        }
+
+        function Pendulum($el, params_) {
+            var v = 0.001,
+                calcForSpeed = true,
+                k = 0,
+                offY = 0,
+                p2,
+                offX = 0,
+                a,
+                wHeight,
+                elWidth2,
+                tStart = new Date().getTime(),
+                offGrad = 0,
+                s_k,
+                onComplete,
+                backgroundL = "linear-gradient(to right,green -60%,  yellow ",
+                backgroundR = "%, green 160%)",
+                cssAnimStyle = {
+                    left: 0,
+                    top: 0,
+                    position: 'fixed'
+                }, default_ = {
+                    longLine: 500,
+                    backgroundDark: 'green',
+                    backgroundLight: 'rgba(255, 255, 0, 0.45)',
+                    distanceLeft: -60,
+                    distanceRight: 160,
+                    hvShadow: 10,
+                    spreadShadow: 20,
+                    colorShadow: 'black'
+                }, options, timer, shadowR,timerOut;
+
+            var initParams = function (params) {
+                options = $.extend(default_, params);
+                if (options.speed !== undefined) {
+                    v = options.speed / 1000;
+                }
+                else if (options.acceleration !== undefined) {
+                    a = options.acceleration / 1000000;
+                    calcForSpeed = false;
+                }
+
+                backgroundL = "linear-gradient(to right," + options.backgroundDark + " " + options.distanceLeft + "%,  " + options.backgroundLight + " ";
+                backgroundR = "%," + options.backgroundDark + " " + options.distanceRight + "%)";
+                shadowR = "px " + options.hvShadow + "px " + options.spreadShadow + "px " + options.colorShadow;
+                init();
+            }
+
+            $(window).resize(init);
+
+            initParams(params_);
+
+            function init() {
+                var $window = $(window);
+                wHeight = $window.height();
+
+                var $body = $('body');
+                var w = $window.innerWidth();
+                var width = $window.innerWidth() - $el.outerWidth(),
+                    height = wHeight - $el.height(),
+                    h = 0,
+                    w2 = width / 2;
+
+                if (w2 >= options.longLine) {
+                    if (height >= options.longLine) {
+                        k = Math.PI / 2;
+                        h = options.longLine;
+                    } else {
+                        k = Math.acos((options.longLine - height) / options.longLine);
+                        h = height;
+                    }
+                }
+                else {
+                    k = Math.asin(w2 / options.longLine);
+                    if (options.longLine - Math.cos(k) * options.longLine > height) {
+                        k = Math.acos((options.longLine - height) / options.longLine);
+                        h = height;
+                    } else {
+                        h = options.longLine - Math.cos(k) * options.longLine;
+                    }
+                }
+                offY = -options.longLine + h + (height - h) / 2 | 2;
+                offX = w2;
+
+                if (calcForSpeed) {
+                    p2 = 4 * k / v;
+                    a = 2 * v / p2;
+                }
+                else {
+                    p2 = Math.sqrt(2 * k / a)
+                    v = a * p2;
+                    p2 *= 2;
+                    console.log("v :" + v + " a " + a + " period:" + p2 + " ange " + k);
+                }
+
+                elWidth2 = $el.width() / 2;
+            }
+
+            var startAnimate = function (animTime,onCom) {
+            	onComplete=onCom;
+                if (animTime !== undefined) {
+                    
+                    if( timerOut !==undefined){
+                        clearInterval(timerOut)
+                    }
+                    timerOut=setTimeout(function (){timeOut=undefined;stopAnimate();}, animTime);
+                }
+                $el.css('visibility', 'visible');
+                init()
+                timer = setInterval(animate, 15)
+
+            };
+            var stopAnimate = function () {
+                if (timer !== undefined) {
+                	if( onComplete !== undefined)
+						onComplete();
+				   
+                	$el.css('visibility','hidden');
+                    clearInterval(timer);
+                    timer = undefined;
+                }
+
+            }
+
+            var animate = function () {
+
+                var now = new Date().getTime(),
+                    t = (now - tStart) % (2 * p2), s,
+                    x = 0;
+
+                if (t > p2) {
+                    t -= p2 | 0;
+                    s = v * t - a * t * t / 2;
+                    if (s < 0) s += k;
+                    x = Math.sin(s) * options.longLine;
+                    s_k = -(s / k)
+                }
+                else {
+                    s = v * t - a * t * t / 2;
+                    if (s < 0) s += k;
+                    x = -Math.sin(s) * options.longLine;
+                    s_k = (s / k)
+                }
+                y = Math.cos(s) * options.longLine;
+                cssAnimStyle.left = offX + x;
+                cssAnimStyle.background = backgroundL + (50 + 45 * s_k | 0) + backgroundR;
+                cssAnimStyle.top = offY + Math.cos(s) * options.longLine | 0;
+                cssAnimStyle.boxShadow = (-options.hvShadow * s_k) + shadowR;
+                $el.css(cssAnimStyle);
+
+            }
+            return {startAnimate: startAnimate, stopAnimate: stopAnimate, chageParams: initParams,$el:$el};
+        }
+
+
+    });
