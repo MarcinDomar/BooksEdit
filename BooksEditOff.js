@@ -666,8 +666,9 @@ $(document)
 		//doAjax(action);
             });
 			
-			   function refreshFromServer() {
+		function refreshFromServer() {
                 var action = GetComunicationObj(config['actions']['refresh']);
+                pendulum.$el.text('Offline. Refresh from server.')
                 showPendulum(); 
                 //doAjax(action);
                 
@@ -675,11 +676,12 @@ $(document)
             }
 			function showPendulum()
 			{
+				lastMod=new Date().getTime();
 				$buttons1=$('.'+config ['CSS'] ['classes'] ['smallBt']+':visible').css("visibility","hidden"),
 				$buttons2=$('.'+config ['CSS'] ['classes'] ['bigBt']+':visible').css("visibility","hidden");
                	pendulum.startAnimate(10000,function(){
 					$buttons1.css("visibility","visible");
-                    $buttons2.css("visibility","visible");
+                			 $buttons2.css("visibility","visible");
 					finishedMod=new Date().getTime();
 				});
 			}
@@ -899,13 +901,13 @@ $(document)
                
                 if (animTime !== undefined) {
                     if( timerOut !==undefined){
-                        clearInterval(timerOut)
+                        clearInterval(timerOut);
+                        stopAnimate();
                     }
                     timerOut=setTimeout(function (){timeOut=undefined;stopAnimate();}, animTime);
                 }
-				$el.css('visibility', 'visible');
+		$el.css('visibility', 'visible');
                 init()
-
                 timer = setInterval(animate, 15)
 
             };
