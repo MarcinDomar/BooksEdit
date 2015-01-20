@@ -194,7 +194,7 @@ div.L1>div{
 div.book-author{
 	font-size:small;
 	display: block;
-	text-align: left;
+	text-align: center;
 	margin: auto auto 0 auto;
 }
 
@@ -202,7 +202,7 @@ div.book-title{
 	display: block;
 	font-size: large;
 	font-weight: bold;
-	text-align:left;
+	text-align:center;
 	margin: 1mm auto auto auto;
 	text-shadow: 3px 3px 3px white;
 }
